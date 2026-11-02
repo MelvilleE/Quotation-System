@@ -8,27 +8,38 @@ The project is a Next.js application that provides one shared quotation engine f
 
 ## Current status
 
-This repository now contains the production unified quotation system on `main`.
+This repository contains the production unified quotation system on `main`.
 
 The current version is still browser-storage based:
 
 - products, sections, saved quotes and quote settings are stored in `localStorage`;
 - Loft and Extension data are namespaced separately;
 - folders and the company signature are shared;
-- there is no real authentication or cloud database yet;
+- a temporary server-checked login gate protects the quotation routes;
+- there is no real user database or cloud-backed authentication yet;
 - multi-user and multi-company support are the next major architecture phase.
 
-Do not treat the current localStorage implementation as a secure multi-user backend.
+### Temporary login
+
+The current production gate is intentionally simple and exists only to stop casual access before proper authentication is introduced.
+
+```text
+Username: admin
+Password: password123
+```
+
+The login creates an HTTP-only session cookie for 12 hours. The `/unified` route tree checks that cookie server-side and redirects unauthenticated users back to `/`.
+
+**Important:** the credentials are hard-coded in this repository, so this must not be treated as secure authentication. Replace this temporary gate when real user accounts are introduced.
+
+Do not treat the current localStorage implementation or temporary login gate as a secure multi-user backend.
 
 ## Main features
 
+- Initial sign-in screen before accessing quotation routes.
 - One dashboard for Loft and Extension quotations.
 - Separate Loft and Extension product catalogues and settings.
-- Product types for:
-  - unit quantities;
-  - metres/length;
-  - square metre area;
-  - custom pricing tiers.
+- Product types for unit quantities, metres/length, square metre area and custom pricing tiers.
 - Admin product management with base cost, supplier, markup and final price.
 - Drag-and-drop section ordering.
 - Saved quotations with revision families and optional revision names.
@@ -47,30 +58,39 @@ Do not treat the current localStorage implementation as a secure multi-user back
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Production unified dashboard |
-| `/unified` | Unified dashboard alias |
+| `/` | Temporary sign-in page |
+| `/unified` | Protected unified dashboard |
 | `/unified/extension` | Extension quote builder |
 | `/unified/extension/admin` | Extension admin |
 | `/unified/loft` | Loft quote builder |
 | `/unified/loft/admin` | Loft admin |
 | `/unified/migrate` | Backup, restore and legacy data migration |
+| `/api/login` | Temporary login endpoint |
+| `/api/logout` | Clears the temporary login session |
 
 ## Architecture
 
 The previous Extension-only application was a single large `app/page.tsx`. That architecture is no longer the production design.
 
-`app/page.tsx` now points to the unified dashboard. Shared behaviour is split into reusable domain, storage, PDF and UI modules.
+`app/page.tsx` is now the sign-in entry point. The quotation system itself lives under `/unified`, with shared behaviour split into reusable domain, storage, PDF and UI modules.
 
 Important locations:
 
 ```text
 app/
-  page.tsx                         Production entry point
+  page.tsx                         Temporary sign-in entry point
+  api/login/route.ts              Temporary login endpoint
+  api/logout/route.ts             Logout endpoint
   unified/
+    layout.tsx                     Server-side login guard
     page.tsx                       Unified dashboard
     extension/                     Extension routes
     loft/                          Loft routes
     migrate/                       Backup/import route
+
+components/auth/
+  LoginPage.tsx                    Sign-in UI
+  LogoutButton.tsx                 Sign-out control
 
 components/quotation/
   UnifiedQuotationAppClassic.tsx   Shared quote-builder UI
@@ -86,6 +106,9 @@ config/
   company.ts                       NLLR fallback company defaults
   default-catalog.ts               Fallback catalogue data
   quote-types.ts                   Loft/Extension configuration
+
+lib/auth/
+  simpleAuth.ts                    Temporary login constants/check
 
 lib/quotation/
   calculations.ts                  Pricing and quote totals
@@ -107,16 +130,7 @@ types/
 
 Current browser storage is intentionally namespaced by quote type.
 
-Examples include separate storage for:
-
-- sections;
-- products;
-- saved quotes;
-- PDF text;
-- financial settings;
-- logos.
-
-Folders and company signature settings are shared across Loft and Extension.
+Separate storage is maintained for sections, products, saved quotes, PDF text, financial settings and logos. Folders and company signature settings are shared across Loft and Extension.
 
 Saved quote data includes the quote form itself, including quote-specific bespoke images.
 
@@ -132,11 +146,7 @@ Because the current application uses browser `localStorage`, data belongs to the
 
 ## Pricing rules that must remain compatible
 
-A product has a `valueType` of:
-
-- `unit`;
-- `meter`;
-- `meterage`.
+A product has a `valueType` of `unit`, `meter` or `meterage`.
 
 Standard product total:
 
@@ -169,17 +179,7 @@ Changing the client name or property address creates a new quote family beginnin
 
 The project uses `jsPDF` for generated quotation documents.
 
-Customer quotation PDFs include:
-
-- company logo(s);
-- client details;
-- bespoke quote images;
-- brief;
-- formatted description of works;
-- pricing summary;
-- quotation text;
-- editable signatory details and signature image;
-- terms and conditions.
+Customer quotation PDFs include company logo(s), client details, bespoke quote images, brief, formatted description of works, pricing summary, quotation text, editable signatory details/signature image and terms and conditions.
 
 Working Details has two variants:
 
@@ -207,11 +207,7 @@ Run locally:
 npm run dev
 ```
 
-Open:
-
-```text
-http://localhost:3000
-```
+Open `http://localhost:3000` and sign in with the temporary credentials above.
 
 Build production output:
 
@@ -243,13 +239,21 @@ npm run lint
 
 Production changes should be build-tested before being pushed to `main`.
 
+The production root `/` is the sign-in screen; authenticated users are sent to `/unified`.
+
+## Repository consolidation
+
+This repository is now the canonical quotation-system codebase for both Loft and Extension work. The previous landing-page and separate Loft repositories are no longer required for application development once their data/code has been verified as safely migrated or backed up.
+
+Do not delete old repositories before confirming any unique data/assets have been preserved.
+
 ## Next major phase
 
 The next architecture phase is to turn the current single-company browser-storage application into a multi-user, multi-company product.
 
 The intended direction is:
 
-- authenticated users;
+- proper authenticated users;
 - organisations/contractors as tenants;
 - Owner/Admin/Estimator roles;
 - PostgreSQL-backed products, quotes, folders and settings;
@@ -259,4 +263,4 @@ The intended direction is:
 - migration of existing NLLR browser data into the first organisation;
 - subscription/billing later, after multi-tenant quoting is stable.
 
-The current unified frontend should be preserved during that migration. The backend should replace the persistence layer rather than unnecessarily redesigning the established quote-builder/admin workflow.
+The current unified frontend should be preserved during that migration. The backend should replace the persistence layer and temporary login gate rather than unnecessarily redesigning the established quote-builder/admin workflow.
