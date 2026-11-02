@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import LogoutButton from "@/components/auth/LogoutButton";
 import CombinedSavedQuotes from "@/components/quotation/CombinedSavedQuotes";
 import FolderManager from "@/components/quotation/FolderManager";
 
@@ -8,12 +9,15 @@ export default function UnifiedDashboard() {
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-5xl space-y-8">
-        <div>
-          <p className="text-sm font-medium text-muted-foreground">North London Loft Rooms Ltd</p>
-          <h1 className="text-4xl font-bold tracking-tight">Quotation System</h1>
-          <p className="mt-2 max-w-2xl text-muted-foreground">
-            One shared quotation engine for Loft and Extension work. Quote-specific products and saved data remain separate while common features are maintained once.
-          </p>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">North London Loft Rooms Ltd</p>
+            <h1 className="text-4xl font-bold tracking-tight">Quotation System</h1>
+            <p className="mt-2 max-w-2xl text-muted-foreground">
+              One shared quotation engine for Loft and Extension work. Quote-specific products and saved data remain separate while common features are maintained once.
+            </p>
+          </div>
+          <LogoutButton />
         </div>
 
         <div className="grid gap-5 md:grid-cols-2">
