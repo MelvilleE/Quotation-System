@@ -118,6 +118,71 @@ export function saveCoverImage(type: QuoteType, value: CoverImageSettings | null
   writeJson(storageKeys(type).coverImage, value);
 }
 
+export interface UnifiedDataExport {
+  format: "quotation-unified-backup";
+  version: 1;
+  exportedAt: string;
+  quoteType: QuoteType;
+  sections: Section[];
+  products: Product[];
+  quotes: SavedQuote[];
+  text: QuoteTextSettings | null;
+  financials: FinancialSettings | null;
+  logos: CoverImageSettings[];
+  folders: QuoteFolder[];
+  signature: SignatureSettings | null;
+}
+
+export function createUnifiedExport(type: QuoteType): UnifiedDataExport {
+  return {
+    format: "quotation-unified-backup",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    quoteType: type,
+    sections: loadSections(type) ?? [],
+    products: loadProducts(type) ?? [],
+    quotes: loadQuotes(type),
+    text: loadTextSettings(type),
+    financials: loadFinancialSettings(type),
+    logos: loadLogos(type),
+    folders: loadFolders(),
+    signature: loadSignatureSettings(),
+  };
+}
+
+export function isUnifiedDataExport(value: unknown): value is UnifiedDataExport {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<UnifiedDataExport>;
+  return candidate.format === "quotation-unified-backup" && candidate.version === 1;
+}
+
+export function importUnifiedExport(type: QuoteType, exported: UnifiedDataExport) {
+  const sections = Array.isArray(exported.sections) ? exported.sections : [];
+  const products = Array.isArray(exported.products) ? exported.products : [];
+  const quotes = Array.isArray(exported.quotes)
+    ? exported.quotes.map((quote) => ({ ...quote, quoteType: type }))
+    : [];
+  const logos = Array.isArray(exported.logos) ? exported.logos : [];
+  const folders = Array.isArray(exported.folders) ? exported.folders : [];
+
+  saveSections(type, sections);
+  saveProducts(type, products);
+  saveQuotes(type, quotes);
+  saveLogos(type, logos);
+  saveFolders(folders);
+  if (exported.text) saveTextSettings(type, exported.text);
+  if (exported.financials) saveFinancialSettings(type, exported.financials);
+  if (exported.signature) saveSignatureSettings(exported.signature);
+
+  return {
+    sections: sections.length,
+    products: products.length,
+    quotes: quotes.length,
+    folders: folders.length,
+    logos: logos.length,
+  };
+}
+
 export interface LegacyLocalStorageExport {
   quotationSections?: Section[] | string;
   quotationProducts?: Product[] | string;
